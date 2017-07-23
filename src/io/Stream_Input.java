@@ -25,17 +25,17 @@ public class Stream_Input implements Input {
       return line;
    }
 
-   public boolean ready() {
+   public boolean has_line() {
 
-      boolean ready = false;
+      boolean has_line = false;
 
       try {
-         ready = p_in.ready();
+         has_line = p_in.ready();
       } catch (IOException e) {
          System.err.println(e);
       }
 
-      return ready;
+      return has_line;
    }
 }
 

@@ -34,8 +34,8 @@ public class My_Process implements Input_Output {
       p_io.put_line(string);
    }
 
-   public boolean ready() {
-      return p_io.ready();
+   public boolean has_line() {
+      return p_io.has_line();
    }
 
    public void close() {

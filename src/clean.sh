@@ -1,4 +1,6 @@
 #!/bin/sh
 
-rm -f */*.class hub.jar
+find . -name '*.class' -exec rm {} \;
+
+rm -f hub.jar
 

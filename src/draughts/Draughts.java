@@ -5,6 +5,7 @@ public class Draughts {
 
    public static void init() {
       Bit.init();
+      Pos.init();
    }
 }
 

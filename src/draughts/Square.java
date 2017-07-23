@@ -3,75 +3,145 @@ package draughts;
 
 public class Square {
 
-   static final int Size = 54;
+   public static final int File_Size = 10; // must be even
+   public static final int Rank_Size = 10; // must be even
+   private static final int Dark_Shift = 1;
 
-   private static int[] p_from_50 = {
-       0,  1,  2,  3,  4,
-       5,  6,  7,  8,  9,
-      11, 12, 13, 14, 15,
-      16, 17, 18, 19, 20,
-      22, 23, 24, 25, 26,
-      27, 28, 29, 30, 31,
-      33, 34, 35, 36, 37,
-      38, 39, 40, 41, 42,
-      44, 45, 46, 47, 48,
-      49, 50, 51, 52, 53,
-   };
+   private static final int Ghost_Size = 1; // must be odd
 
-   private static int[] p_to_50 = {
-       0,  1,  2,  3,  4,
-       5,  6,  7,  8,  9, -1,
-      10, 11, 12, 13, 14,
-      15, 16, 17, 18, 19, -1,
-      20, 21, 22, 23, 24,
-      25, 26, 27, 28, 29, -1,
-      30, 31, 32, 33, 34,
-      35, 36, 37, 38, 39, -1,
-      40, 41, 42, 43, 44,
-      45, 46, 47, 48, 49,
-   };
+   private static final int File_Even  = File_Size  / 2;
+   private static final int Ghost_Even = Ghost_Size / 2 + (1 - Dark_Shift);
+
+   public static final int Dense_Size  =        File_Size         * (Rank_Size / 2);
+   public static final int Sparse_Size = (File_Size + Ghost_Size) * (Rank_Size / 2);
+
+   private static final int I = (File_Size + Ghost_Size) / 2;
+   private static final int J = (File_Size + Ghost_Size) / 2 + 1;
 
    static int[] inc = {
-      -6, -5, +5, +6
+      -J, -I, +I, +J
    };
 
    static int[][] side_inc = {
-      { -6, -5 },
-      { +5, +6 },
+      { -J, -I },
+      { +I, +J },
    };
 
+   public static boolean is_valid(int fl, int rk) {
+      return (fl >= 0 && fl < File_Size)
+          && (rk >= 0 && rk < Rank_Size)
+          && is_dark(fl, rk);
+   }
+
    static boolean is_valid(int sq) {
-      return sq >= 0 && sq < Size && p_to_50[sq] >= 0;
+
+      if (sq < 0 || sq >= Sparse_Size) return false;
+
+      int rest = sq % (File_Size + Ghost_Size);
+
+      if (rest >= File_Even + Ghost_Even) { // odd rank
+         rest -= File_Even + Ghost_Even;
+      }
+
+      return rest < File_Size / 2;
    }
 
-   public static int from_50(int i) {
-      return p_from_50[i];
+   public static boolean is_light(int fl, int rk) {
+      return !is_dark(fl, rk);
    }
 
-   public static int to_50(int sq) {
+   public static boolean is_dark(int fl, int rk) {
+      return (fl + rk + Dark_Shift) % 2 == 0;
+   }
+
+   public static int make(int fl, int rk) {
+      assert is_valid(fl, rk);
+      int dense = (rk * File_Size + fl) / 2;
+      return sparse(dense);
+   }
+
+   public static int sparse(int dense) {
+
+      assert dense >= 0 && dense < Dense_Size;
+
+      int ranks = dense / File_Size;
+      int rest  = dense % File_Size;
+
+      int sparse = dense + Ghost_Size * ranks;
+
+      if (rest >= File_Even) { // odd rank
+         sparse += Ghost_Even;
+      }
+
+      return sparse;
+   }
+
+   public static int dense(int sq) {
+
       assert is_valid(sq);
-      return p_to_50[sq];
+
+      int ranks = sq / (File_Size + Ghost_Size);
+      int rest  = sq % (File_Size + Ghost_Size);
+
+      int dense = sq - Ghost_Size * ranks;
+
+      if (rest >= File_Even + Ghost_Even) { // odd rank
+         dense -= Ghost_Even;
+      }
+
+      return dense;
    }
 
-   static boolean is_promotion(int sq, int sd) {
+   static int rank(int sq) {
 
       assert is_valid(sq);
+
+      int ranks = sq / (File_Size + Ghost_Size);
+      int rest  = sq % (File_Size + Ghost_Size);
+
+      int rk = ranks * 2;
+
+      if (rest >= File_Even + Ghost_Even) { // odd rank
+         rk++;
+      }
+
+      return rk;
+   }
+
+   static int rank(int sq, int sd) {
+
+      int rk = rank(sq);
 
       if (sd == Side.White) {
-         return sq <= 4;
+         return (Rank_Size - 1) - rk;
       } else {
-         return sq >= 49;
+         return rk;
       }
    }
 
-   public static String to_string(int sq) {
-      return Integer.toString(to_50(sq) + 1);
+   public static int opp(int sq) {
+      return sparse((Dense_Size - 1) - dense(sq));
    }
 
-   public static int from_string(String s) throws Bad_Input {
-      int sq = Integer.parseInt(s);
-      if (sq < 1 || sq > 50) throw new Bad_Input();
-      return from_50(sq - 1);
+   static boolean is_promotion(int sq, int sd) {
+      return rank(sq, sd) == Rank_Size - 1;
+   }
+
+   static int from_string(String s) throws Bad_Input {
+      return from_std(Integer.parseInt(s));
+   }
+
+   static String to_string(int sq) {
+      return Integer.toString(to_std(sq));
+   }
+
+   static int from_std(int std) throws Bad_Input {
+      if (std < 1 || std > Dense_Size) throw new Bad_Input();
+      return sparse(std - 1);
+   }
+
+   static int to_std(int sq) {
+      return dense(sq) + 1;
    }
 }
 

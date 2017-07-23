@@ -7,45 +7,27 @@ import util.*;
 
 public class Move {
 
-   public static final int None = 0;
-   public static final int Amb = 1;
+   public static final long None = 0;
+   public static final long Amb = 1;
 
    static long make(int from, int to) {
       return make(from, to, 0);
    }
 
    static long make(int from, int to, long caps) {
+
       assert Square.is_valid(from);
       assert Square.is_valid(to);
-      assert (caps & 077) == 0;
-      return (caps << 6) | (((long) from) << 6) | ((long) to);
-   }
+      assert Bit.is_valid(caps);
 
-   static int from(long mv) {
-      return (int) ((mv >> 6) & 077);
-   }
+      assert !Bit.has(caps, from);
+      assert !Bit.has(caps, to);
 
-   static int to(long mv) {
-      return (int) (mv & 077);
-   }
-
-   static long caps(long mv) {
-      return (mv >> 6) & ~077;
+      return Bit.bit(from) | Bit.bit(to) | caps;
    }
 
    public static long bit(long mv) { // for GUI
-
-      if (mv == None) return 0;
-
-      int  from = Move.from(mv);
-      int  to   = Move.to(mv);
-      long caps = Move.caps(mv);
-
-      long b = caps;
-      b = Bit.set(b, from);
-      if (to != from) b = Bit.set(b, to); // for debug
-
-      return b;
+      return mv;
    }
 
    public static boolean is_legal(long mv, Pos pos) {
@@ -53,21 +35,40 @@ public class Move {
       return list.has(mv);
    }
 
-   public static boolean is_conversion(long mv, Pos pos) {
+   static boolean is_conversion(long mv, Pos pos) {
+      return is_capture(mv, pos) || is_man(mv, pos);
+   }
 
-      int  from = Move.from(mv);
-      long caps = Move.caps(mv);
+   static boolean is_capture(long mv, Pos pos) {
+      long caps = mv & pos.side(Side.opp(pos.turn()));
+      return caps != 0;
+   }
 
-      return caps != 0 || Piece.is_man(pos.square(from));
+   static boolean is_man(long mv, Pos pos) {
+      long froms = mv & pos.side(pos.turn());
+      return Bit.has_common(froms, pos.piece(Piece.Man));
    }
 
    public static String to_string(long mv, Pos pos) {
+      return to_string(mv, pos, false);
+   }
+
+   public static String to_hub(long mv, Pos pos) {
+      return to_string(mv, pos, true);
+   }
+
+   private static String to_string(long mv, Pos pos, boolean add_caps) {
 
       assert is_legal(mv, pos);
 
-      int  from = Move.from(mv);
-      int  to   = Move.to(mv);
-      long caps = Move.caps(mv);
+      long froms = mv & pos.side(pos.turn());
+      long tos   = mv & pos.empty();
+      long caps  = mv & pos.side(Side.opp(pos.turn()));
+
+      if (tos == 0) tos = froms; // to = from
+
+      int from = Bit.first(froms);
+      int to   = Bit.first(tos);
 
       String s = "";
 
@@ -75,24 +76,11 @@ public class Move {
       s += (caps != 0) ? "x" : "-";
       s += Square.to_string(to);
 
-      return s;
-   }
-
-   public static String to_hub(long mv) {
-
-      int  from = Move.from(mv);
-      int  to   = Move.to(mv);
-      long caps = Move.caps(mv);
-
-      String s = "";
-
-      s += Square.to_string(from);
-      s += (caps != 0) ? "x" : "-";
-      s += Square.to_string(to);
-
-      for (long b = caps; b != 0; b = Bit.rest(b)) {
-         int sq = Bit.first(b);
-         s += "x" + Square.to_string(sq);
+      if (add_caps) {
+         for (long b = caps; b != 0; b = Bit.rest(b)) {
+            int sq = Bit.first(b);
+            s += "x" + Square.to_string(sq);
+         }
       }
 
       return s;

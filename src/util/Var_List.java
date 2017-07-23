@@ -4,25 +4,30 @@ package util;
 import java.io.*;
 import java.util.*;
 
+import io.Stream_Input;
+
 public class Var_List {
 
    static private final int Size = 256;
 
    private int p_size;
-   private String[] p_name;
-   private String[] p_value;
+   private Pair[] p_pair;
 
    public Var_List() {
       p_size = 0;
-      p_name = new String[Size];
-      p_value = new String[Size];
+      p_pair = new Pair[Size];
+   }
+
+   public Var_List(String file_name) {
+      this();
+      load(file_name);
    }
 
    public String get(String name) {
 
       for (int i = 0; i < p_size; i++) {
-         if (p_name[i].equals(name)) {
-            return p_value[i];
+         if (p_pair[i].name().equals(name)) {
+            return p_pair[i].value();
          }
       }
 
@@ -40,24 +45,27 @@ public class Var_List {
       return Integer.parseInt(get(name));
    }
 
+   public double get_real(String name) {
+      return Double.parseDouble(get(name));
+   }
+
    public void set(String name, String value) {
 
       for (int i = 0; i < p_size; i++) {
-         if (p_name[i].equals(name)) {
-            p_value[i] = value;
+         if (p_pair[i].name().equals(name)) {
+            p_pair[i] = Pair.make(name, value);
             return;
          }
       }
 
-      p_name[p_size] = name;
-      p_value[p_size] = value;
+      p_pair[p_size] = Pair.make(name, value);
       p_size++;
    }
 
    public boolean has(String name) {
 
       for (int i = 0; i < p_size; i++) {
-         if (p_name[i].equals(name)) {
+         if (p_pair[i].name().equals(name)) {
             return true;
          }
       }
@@ -70,20 +78,18 @@ public class Var_List {
       try {
 
          InputStream is = new FileInputStream(file_name);
-         Scanner scan = new Scanner(is);
+         Stream_Input si = new Stream_Input(is);
 
-         while (scan.hasNext()) {
+         while (si.has_line()) {
 
-            assert scan.hasNext();
-            String name = scan.next();
+            String line = si.get_line();
 
-            assert scan.hasNext();
-            String sep = scan.next();
-            assert sep.equals("=");
+            if (line.isEmpty()) continue; // skip empty line
+            if (line.charAt(0) == '#') continue; // skip comment
 
-            assert scan.hasNext();
-            String value = scan.next();
-
+            String[] fields = line.split("=");
+            String name = fields[0].trim();
+            String value = (fields.length == 2) ? fields[1].trim() : "";
             set(name, value);
          }
 
@@ -98,13 +104,16 @@ public class Var_List {
    }
 
    public String name(int n) {
-      assert(n < p_size);
-      return p_name[n];
+      return pair(n).name();
    }
 
    public String value(int n) {
-      assert(n < p_size);
-      return p_value[n];
+      return pair(n).value();
+   }
+
+   public Pair pair(int n) {
+      assert n < p_size;
+      return p_pair[n];
    }
 }
 

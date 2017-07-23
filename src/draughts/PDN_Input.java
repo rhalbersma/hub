@@ -52,7 +52,7 @@ public class PDN_Input {
          }
 
          if (name.equals("FEN")) {
-            game = new Game(value);
+            game = new Game(FEN.from_fen(value));
          }
 
          t = scan.get_token();
@@ -171,7 +171,7 @@ class PDN_Scanner {
                lexeme += (char) p_char;
 
                String digits = read_digits();
-               if (digits.equals("")) {
+               if (digits.isEmpty()) {
                   System.err.println("PDN syntax error: expected number in move");
                   throw new Bad_Input();
                }

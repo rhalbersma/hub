@@ -15,9 +15,21 @@ public class List {
       p_cap_size = 0;
    }
 
-   void add(long mv) {
+   void add(int from, int to) {
 
-      int cap_size = Bit.count(Move.caps(mv));
+      assert p_cap_size == 0;
+
+      long mv = Move.make(from, to);
+
+      assert !has(mv);
+      p_list[p_size++] = mv;
+   }
+
+   void add(int from, int to, long caps) {
+
+      assert caps != 0;
+
+      int cap_size = Bit.count(caps);
 
       if (cap_size < p_cap_size) {
          return;
@@ -26,9 +38,9 @@ public class List {
          p_cap_size = cap_size;
       }
 
-      if (cap_size >= 4 && has(mv)) { // duplicate move
-         return;
-      }
+      long mv = Move.make(from, to, caps);
+
+      if (cap_size >= 4 && has(mv)) return; // duplicate move
 
       assert !has(mv);
       p_list[p_size++] = mv;

@@ -1,43 +1,31 @@
 
 package draughts;
 
-import java.io.*;
-
 import util.*;
 
 public class FEN {
-
-   public static final String Start = "W:W31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50:B1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20";
 
    public static String to_fen(Pos pos) {
 
       String s = "";
 
-      s += output_side(pos.turn());
-
-      for (int sd = 0; sd < Side.Size; sd++) {
-         s += ":";
-         s += output_side(sd);
-         s += output_pieces(pos.man(sd), pos.king(sd));
-      }
+      s += (pos.turn() == Side.White) ? "W" : "B";
+      s += ":W" + output_pieces(pos, Side.White);
+      s += ":B" + output_pieces(pos, Side.Black);
 
       return s;
    }
 
-   private static String output_side(int sd) {
-      return (sd == Side.White) ? "W" : "B";
-   }
-
-   private static String output_pieces(long man, long king) {
+   private static String output_pieces(Pos pos, int sd) {
 
       String s = "";
 
-      for (long b = man | king; b != 0; b = Bit.rest(b)) {
+      for (long b = pos.side(sd); b != 0; b = Bit.rest(b)) {
 
          int sq = Bit.first(b);
 
-         if (!s.equals("")) s += ",";
-         if (Bit.is_set(king, sq)) s += "K";
+         if (!s.isEmpty()) s += ",";
+         if (pos.is_piece(sq, Piece.King)) s += "K";
          s += Square.to_string(sq);
       }
 
@@ -55,16 +43,20 @@ public class FEN {
 
       while (!scan.is_end()) {
 
-         String sep = scan.get_token();
-         if (!sep.equals(":")) throw new Bad_Input();
+         String t = scan.get_token();
+         if (!t.equals(":")) throw new Bad_Input();
 
          int sd = parse_side(scan);
-         Pieces p = parse_pieces(scan);
-         man[sd]  |= p.man();
-         king[sd] |= p.king();
+         long[] piece = parse_pieces(scan);
+         man[sd]  |= piece[Piece.Man];
+         king[sd] |= piece[Piece.King];
       }
 
-      return new Pos(turn, man[Side.White], man[Side.Black], king[Side.White], king[Side.Black]);
+      return new Pos(turn,
+                 man[Side.White],
+                 man[Side.Black],
+                 king[Side.White],
+                 king[Side.Black]);
    }
 
    private static int parse_side(Number_Scanner scan) throws Bad_Input {
@@ -80,25 +72,24 @@ public class FEN {
       }
    }
 
-   private static Pieces parse_pieces(Number_Scanner scan) throws Bad_Input {
+   private static long[] parse_pieces(Number_Scanner scan) throws Bad_Input {
 
-      long man = 0;
-      long king = 0;
+      long[] piece = new long[Piece.Size];
 
       while (true) {
 
-         boolean is_king = false;
+         int pc = Piece.Man;
 
          String t = scan.get_token();
          if (t.equals(",")) t = scan.get_token();
 
-         if (t.equals("")) { // EOS
+         if (t.isEmpty()) { // EOS
             break;
          } else if (t.equals(":")) {
             scan.unget_char(); // HACK: no unget_token
             break;
          } else if (t.equals("K")) {
-            is_king = true;
+            pc = Piece.King;
             t = scan.get_token();
          }
 
@@ -116,40 +107,17 @@ public class FEN {
          if (from > to) throw new Bad_Input();
 
          for (int sq = from; sq <= to; sq++) {
-            if (is_king) {
-               king = Bit.set(king, Square.from_50(sq - 1));
-            } else {
-               man = Bit.set(man, Square.from_50(sq - 1));
-            }
+            piece[pc] = Bit.set(piece[pc], Square.from_std(sq));
          }
       }
 
-      return new Pieces(man, king);
+      return piece;
    }
 
    private static int parse_square(String s) throws Bad_Input {
       int sq = Integer.parseInt(s);
-      if (sq < 1 || sq > 50) throw new Bad_Input();
+      if (sq < 1 || sq > Square.Dense_Size) throw new Bad_Input();
       return sq;
-   }
-}
-
-class Pieces {
-
-   private long p_man;
-   private long p_king;
-
-   Pieces(long man, long king) {
-      p_man = man;
-      p_king = king;
-   }
-
-   long man() {
-      return p_man;
-   }
-
-   long king() {
-      return p_king;
    }
 }
 

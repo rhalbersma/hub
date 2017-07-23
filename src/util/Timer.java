@@ -4,15 +4,15 @@ package util;
 public class Timer {
 
    private boolean p_is_running;
-   private long p_start;
-   private int p_elapsed;
+   private double p_start;
+   private double p_elapsed;
 
    public Timer() {
       reset();
    }
 
    public void reset() {
-      p_elapsed = 0;
+      p_elapsed = 0.0;
       p_is_running = false;
    }
 
@@ -23,7 +23,7 @@ public class Timer {
    }
 
    public void restart() {
-      p_elapsed = 0;
+      p_elapsed = 0.0;
       p_is_running = true;
       p_start = now();
    }
@@ -34,23 +34,20 @@ public class Timer {
       p_is_running = false;
    }
 
-   public int elapsed() {
+   public double elapsed() {
 
-      int time = p_elapsed;
+      double time = p_elapsed;
       if (p_is_running) time += time();
 
-      assert time >= 0;
       return time;
    }
 
-   private int time() {
-      int time = (int) (now() - p_start);
-      assert time >= 0;
-      return time;
+   private double time() {
+      return now() - p_start;
    }
 
-   private static long now() {
-      return System.currentTimeMillis();
+   private static double now() {
+      return (double) System.currentTimeMillis() / 1000.0;
    }
 }
 

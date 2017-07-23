@@ -1,4 +1,3 @@
 #!/bin/sh
-
 java -server -jar hub.jar
 

@@ -18,18 +18,18 @@ public class Bit {
 
       Squares = 0;
 
-      for (int i = 0; i < 50; i++) {
-         int sq = Square.from_50(i);
+      for (int dense = 0; dense < Square.Dense_Size; dense++) {
+         int sq = Square.sparse(dense);
          Squares = Bit.set(Squares, sq);
       }
 
       // king moves
 
-      p_king_moves = new long[Square.Size];
+      p_king_moves = new long[Square.Sparse_Size];
 
-      for (int i = 0; i < 50; i++) {
+      for (int dense = 0; dense < Square.Dense_Size; dense++) {
 
-         int from = Square.from_50(i);
+         int from = Square.sparse(dense);
          long b = 0;
 
          for (int dir = 0; dir < 4; dir++) {
@@ -49,12 +49,12 @@ public class Bit {
 
       // between & inc // TODO: merge with p_king_moves? #
 
-      p_between = new long[Square.Size][Square.Size];
-      p_inc     = new byte[Square.Size][Square.Size];
+      p_between = new long[Square.Sparse_Size][Square.Sparse_Size];
+      p_inc     = new byte[Square.Sparse_Size][Square.Sparse_Size];
 
-      for (int i = 0; i < 50; i++) {
+      for (int dense = 0; dense < Square.Dense_Size; dense++) {
 
-         int from = Square.from_50(i);
+         int from = Square.sparse(dense);
 
          for (int dir = 0; dir < 4; dir++) {
 
@@ -97,22 +97,26 @@ public class Bit {
       return inc;
    }
 
+   static boolean is_valid(long b) {
+      return is_incl(b, Squares);
+   }
+
    public static long bit(int n) {
       assert Square.is_valid(n); // HACK?
       return 1L << n;
    }
 
-   public static boolean is_set(long b, int n) {
+   public static boolean has(long b, int n) {
       return (b & bit(n)) != 0;
    }
 
    public static long set(long b, int n) {
-      assert !Bit.is_set(b, n);
+      assert !Bit.has(b, n);
       return b | bit(n);
    }
 
    public static long clear(long b, int n) {
-      assert Bit.is_set(b, n);
+      assert Bit.has(b, n);
       return b & ~bit(n);
    }
 
@@ -132,11 +136,21 @@ public class Bit {
       return (b0 & ~b1) == 0;
    }
 
+   static boolean is_disjoint(long b0, long b1) { // not used
+      return (b0 & b1) == 0;
+   }
+
+   static boolean has_common(long b0, long b1) {
+      return (b0 & b1) != 0;
+   }
+
    static int first(long b) {
+      assert b != 0;
       return Long.numberOfTrailingZeros(b);
    }
 
    static long rest(long b) {
+      assert b != 0;
       return b & (b - 1);
    }
 
@@ -144,22 +158,25 @@ public class Bit {
       return Long.bitCount(b);
    }
 
-   public static void disp(long b) {
+   static void disp(long b) {
 
-      for (int y = 0; y < 10; y++) {
+      for (int rk = 0; rk < Square.Rank_Size; rk++) {
 
-         if (y % 2 == 0) {
-            System.out.print("  ");
-         }
+         for (int fl = 0; fl < Square.File_Size; fl++) {
 
-         for (int x = 0; x < 5; x++) {
+            if (Square.is_light(fl, rk)) {
 
-            int sq = Square.from_50(y * 5 + x);
+               System.out.print("  ");
 
-            if (Bit.is_set(b, sq)) {
-               System.out.print("#   ");
             } else {
-               System.out.print("-   ");
+
+               int sq = Square.make(fl, rk);
+
+               if (Bit.has(b, sq)) {
+                  System.out.print("# ");
+               } else {
+                  System.out.print("- ");
+               }
             }
          }
 

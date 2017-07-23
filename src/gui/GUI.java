@@ -2,7 +2,9 @@
 package gui;
 
 import java.awt.*;
+import java.awt.datatransfer.*;
 import java.awt.event.*;
+import java.io.*;
 import javax.swing.*;
 
 import draughts.*;
@@ -39,22 +41,22 @@ public class GUI {
       Font font_small = label.getFont();
       Font font_large = new Font(font_small.getName(), Font.PLAIN, Hub.vars.get_int("gui-font"));
 
-      p_label_clock_north = new JLabel("99:99"); // to set window size properly
+      p_label_clock_north = new JLabel("00:00"); // to set window size properly
       p_label_clock_north.setFont(font_large);
       p_label_clock_north.setAlignmentX(Component.CENTER_ALIGNMENT);
       p_panel_east.add(p_label_clock_north);
 
-      p_label_move = new JLabel("999"); // to set window size properly
+      p_label_move = new JLabel("0"); // to set window size properly
       p_label_move.setFont(font_large);
       p_label_move.setAlignmentX(Component.CENTER_ALIGNMENT);
       p_panel_east.add(p_label_move);
 
-      p_label_state = new JLabel("Analysis"); // to set window size properly
+      p_label_state = new JLabel("Ponder"); // to set window size properly
       p_label_state.setFont(font_large);
       p_label_state.setAlignmentX(Component.CENTER_ALIGNMENT);
       p_panel_east.add(p_label_state);
 
-      p_label_clock_south = new JLabel("99:99"); // to set window size properly
+      p_label_clock_south = new JLabel("00:00"); // to set window size properly
       p_label_clock_south.setFont(font_large);
       p_label_clock_south.setAlignmentX(Component.CENTER_ALIGNMENT);
       p_panel_east.add(p_label_clock_south);
@@ -67,9 +69,7 @@ public class GUI {
       p_frame.pack();
       p_frame.setVisible(true);
 
-      p_clock = new String[Side.Size];
-      p_clock[Side.White] = "99:99";
-      p_clock[Side.Black] = "99:99";
+      p_clock = new String[] { "00:00", "00:00" };
    }
 
    public void set_title(String title) {
@@ -86,10 +86,29 @@ public class GUI {
 
    public void set_clocks(int time_white, int time_black) {
 
-      p_clock[Side.White] = String.format("%02d:%02d", time_white / 60, time_white % 60);
-      p_clock[Side.Black] = String.format("%02d:%02d", time_black / 60, time_black % 60);
+      p_clock[Side.White] = format_time(time_white);
+      p_clock[Side.Black] = format_time(time_black);
 
       update_clocks();
+   }
+
+   private String format_time(int time) {
+
+      String s = "";
+
+      if (time < 0) {
+         s += "-";
+         time = -time;
+      }
+
+      if (time >= 3600) { // 1 hour
+         s += time / 3600 + ":";
+         time %= 3600;
+      }
+
+      s += String.format("%02d:%02d", time / 60, time % 60);
+
+      return s;
    }
 
    public void set_state(String state) {
@@ -145,9 +164,10 @@ class Panel_Board extends JPanel implements Runnable, MouseListener, KeyListener
 
    private static final long serialVersionUID = 0; // who cares?
 
-   private static final int Square_None = -1;
+   private static final int Square_None = -1; // TODO: move to draughts.Square?
 
-   private Board p_board;
+   private Pos p_pos;
+   private long p_squares;
    private boolean p_redraw;
 
    private int p_size;
@@ -157,7 +177,8 @@ class Panel_Board extends JPanel implements Runnable, MouseListener, KeyListener
 
    public Panel_Board() {
 
-      p_board = new Board();
+      p_pos = Pos.Start;
+      p_squares = 0;
       p_redraw = false;
 
       p_size = Hub.vars.get_int("gui-square");
@@ -168,7 +189,7 @@ class Panel_Board extends JPanel implements Runnable, MouseListener, KeyListener
       addMouseListener(this);
       addKeyListener(this);
 
-      setPreferredSize(new Dimension(p_size * 10, p_size * 10));
+      setPreferredSize(new Dimension(Square.File_Size * p_size, Square.Rank_Size * p_size));
       setFocusable(true); // for keyboard events #
 
       if (Thread) util.Thread.launch(this);
@@ -188,7 +209,8 @@ class Panel_Board extends JPanel implements Runnable, MouseListener, KeyListener
    }
 
    public synchronized void set_board(Pos pos, long squares) {
-      p_board.init(pos, squares);
+      p_pos = pos;
+      p_squares = squares;
       p_redraw = true;
       if (!Thread) repaint();
    }
@@ -208,7 +230,7 @@ class Panel_Board extends JPanel implements Runnable, MouseListener, KeyListener
    }
 
    public int turn() {
-      return p_board.turn();
+      return p_pos.turn();
    }
 
    public void mouseEntered(MouseEvent e) {
@@ -225,7 +247,7 @@ class Panel_Board extends JPanel implements Runnable, MouseListener, KeyListener
       if (SwingUtilities.isLeftMouseButton(e)) {
          p_from = square(e);
       } else {
-         Hub.model.unclick();
+         Hub.model_user.unclick();
          p_from = Square_None;
       }
    }
@@ -236,10 +258,8 @@ class Panel_Board extends JPanel implements Runnable, MouseListener, KeyListener
 
          int to = square(e);
 
-         if (p_from >= 0 && to >= 0 && to != p_from) {
-            int from = Square.from_50(p_from);
-            to = Square.from_50(to);
-            Hub.model.drag(from, to);
+         if (p_from != Square_None && to != Square_None && to != p_from) {
+            Hub.model_user.drag(p_from, to);
          }
       }
 
@@ -249,13 +269,8 @@ class Panel_Board extends JPanel implements Runnable, MouseListener, KeyListener
    public void mouseClicked(MouseEvent e) {
 
       if (SwingUtilities.isLeftMouseButton(e)) {
-
          int sq = square(e);
-
-         if (sq >= 0) {
-            sq = Square.from_50(sq);
-            Hub.model.click(sq);
-         }
+         if (sq != Square_None) Hub.model_user.click(sq);
       }
 
       p_from = Square_None;
@@ -264,43 +279,74 @@ class Panel_Board extends JPanel implements Runnable, MouseListener, KeyListener
    public void keyPressed(KeyEvent e) {
 
       int key = e.getKeyCode();
-      char c = e.getKeyChar();
+      char c  = e.getKeyChar();
 
       if (c == '0') {
-         Hub.model.set_players(0);
+         Hub.model_user.set_players(0);
       } else if (c == '1') {
-         Hub.model.set_players(1);
+         Hub.model_user.set_players(1);
       } else if (c == '2') {
-         Hub.model.set_players(2);
+         Hub.model_user.set_players(2);
       } else if (key == KeyEvent.VK_A) {
-         Hub.model.analyse();
+         Hub.model_user.analyse();
       } else if (key == KeyEvent.VK_G) {
-         Hub.model.go();
+         Hub.model_user.go();
       } else if (key == KeyEvent.VK_L) {
-         Hub.model.load_game();
+         Hub.model_user.load_game();
       } else if (key == KeyEvent.VK_N) {
-         Hub.model.new_game();
+         Hub.model_user.new_game();
       } else if (key == KeyEvent.VK_O) {
-         Hub.model.toggle_oval();
+         Hub.model_user.toggle_oval();
       } else if (key == KeyEvent.VK_P) {
-         Hub.model.ping();
+         String s = get_clipboard();
+         if (s != null) Hub.model_user.set_pos(s);
       } else if (key == KeyEvent.VK_R) {
-         Hub.model.reverse_board();
+         Hub.model_user.reverse_board();
       } else if (key == KeyEvent.VK_S) {
-         Hub.model.save_game();
+         Hub.model_user.save_game();
       } else if (key == KeyEvent.VK_ESCAPE) {
-         Hub.model.move_now();
+         Hub.model_user.move_now();
       } else if (key == KeyEvent.VK_SPACE) {
-         Hub.model.single_move();
+         Hub.model_user.single_move();
       } else if (key == KeyEvent.VK_LEFT) {
-         Hub.model.undo();
+         Hub.model_user.undo();
       } else if (key == KeyEvent.VK_RIGHT) {
-         Hub.model.redo();
+         Hub.model_user.redo();
       } else if (key == KeyEvent.VK_UP) {
-         Hub.model.undo_all();
+         Hub.model_user.undo_all();
       } else if (key == KeyEvent.VK_DOWN) {
-         Hub.model.redo_all();
+         Hub.model_user.redo_all();
       }
+   }
+
+   private String get_clipboard() {
+
+      Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
+
+      Transferable t = clipboard.getContents(null);
+
+      if (t != null && t.isDataFlavorSupported(DataFlavor.stringFlavor)) {
+
+         try {
+            return (String) t.getTransferData(DataFlavor.stringFlavor);
+         } catch (UnsupportedFlavorException e) {
+            e.printStackTrace();
+            return null;
+         } catch (IOException e) {
+            e.printStackTrace();
+            return null;
+         }
+      }
+
+      return null;
+   }
+
+   private void set_clipboard(String s) {
+
+      Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
+
+      StringSelection selection = new StringSelection(s);
+      clipboard.setContents(selection, null);
    }
 
    public void keyReleased(KeyEvent e) {
@@ -311,7 +357,7 @@ class Panel_Board extends JPanel implements Runnable, MouseListener, KeyListener
 
    public void paintComponent(Graphics g) {
 
-      p_size = Math.min(getWidth(), getHeight()) / 10;
+      p_size = Math.min(getWidth() / Square.File_Size, getHeight() / Square.Rank_Size);
 
       super.paintComponent(g);
 
@@ -321,8 +367,8 @@ class Panel_Board extends JPanel implements Runnable, MouseListener, KeyListener
          g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
       }
 
-      for (int y = 0; y < 10; y++) {
-         for (int x = 0; x < 10; x++) {
+      for (int y = 0; y < Square.Rank_Size; y++) {
+         for (int x = 0; x < Square.File_Size; x++) {
             draw_square(g, x, y);
          }
       }
@@ -338,21 +384,13 @@ class Panel_Board extends JPanel implements Runnable, MouseListener, KeyListener
 
          int sq = square(x, y);
 
-         draw_square(g, x, y, p_board.is_set(sq) ? Color.RED : dark_colour());
+         draw_square(g, x, y, Bit.has(p_squares, sq) ? Color.RED : dark_colour());
 
-         switch (p_board.square(sq)) {
-         case Piece.WM :
-            draw_man(g, x, y, Color.WHITE, Color.BLACK);
-            break;
-         case Piece.BM :
-            draw_man(g, x, y, Color.BLACK, Color.WHITE);
-            break;
-         case Piece.WK :
-            draw_king(g, x, y, Color.WHITE, Color.BLACK);
-            break;
-         case Piece.BK :
-            draw_king(g, x, y, Color.BLACK, Color.WHITE);
-            break;
+         switch (p_pos.piece_side(sq)) {
+            case White_Man :  draw_man (g, x, y, Color.WHITE, Color.BLACK); break;
+            case Black_Man :  draw_man (g, x, y, Color.BLACK, Color.WHITE); break;
+            case White_King : draw_king(g, x, y, Color.WHITE, Color.BLACK); break;
+            case Black_King : draw_king(g, x, y, Color.BLACK, Color.WHITE); break;
          }
       }
    }
@@ -438,67 +476,20 @@ class Panel_Board extends JPanel implements Runnable, MouseListener, KeyListener
       int x = e.getX() / p_size;
       int y = e.getY() / p_size;
 
-      if (is_dark(x, y)) {
-         return square(x, y);
-      } else {
-         return -1;
-      }
+      return Square.is_valid(x, y) ? square(x, y) : Square_None;
    }
 
    private int square(int x, int y) {
-      int sq = y * 5 + x / 2;
-      if (p_reverse) sq = 49 - sq;
-      return sq;
+      int sq = Square.make(x, y);
+      return p_reverse ? Square.opp(sq) : sq;
    }
 
    static private boolean is_light(int x, int y) {
-      return !is_dark(x, y);
+      return Square.is_light(x, y);
    }
 
    static private boolean is_dark(int x, int y) {
-      return (x + y) % 2 != 0;
-   }
-}
-
-class Board {
-
-   private int[] p_square;
-   private int p_turn;
-   private long p_bit;
-
-   Board() {
-
-      p_square = new int[50];
-
-      for (int i = 0; i < 50; i++) {
-         p_square[i] = Piece.Empty;
-      }
-
-      p_turn = Side.White;
-      p_bit = 0;
-   }
-
-   void init(Pos pos, long bit) {
-
-      for (int i = 0; i < 50; i++) {
-         int sq = Square.from_50(i);
-         p_square[i] = pos.square(sq);
-      }
-
-      p_turn = pos.turn();
-      p_bit = bit;
-   }
-
-   int square(int sq) {
-      return p_square[sq];
-   }
-
-   int turn() {
-      return p_turn;
-   }
-
-   boolean is_set(int sq) {
-      return Bit.is_set(p_bit, Square.from_50(sq));
+      return Square.is_dark(x, y);
    }
 }
 

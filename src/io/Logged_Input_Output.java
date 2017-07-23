@@ -38,8 +38,8 @@ public class Logged_Input_Output implements Input_Output {
       p_out.put_line(string);
    }
 
-   public boolean ready() {
-      return p_in.ready();
+   public boolean has_line() {
+      return p_in.has_line();
    }
 
    public void close() {

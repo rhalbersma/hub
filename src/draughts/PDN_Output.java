@@ -99,10 +99,9 @@ public class PDN_Output implements Output {
 
       // starting position
 
-      String fen = FEN.to_fen(pos);
-      if (!fen.equals(FEN.Start)) {
+      if (!pos.equals(Pos.Start)) {
          po.put_tag_pair("Setup", "1");
-         po.put_tag_pair("FEN", fen);
+         po.put_tag_pair("FEN", FEN.to_fen(pos));
       }
 
       // moves
@@ -123,7 +122,7 @@ public class PDN_Output implements Output {
 
          long mv = game.move(i);
          po.put_word(Move.to_string(mv, pos));
-         pos = new Pos(pos, mv);
+         pos = pos.succ(mv);
       }
 
       po.put_word("*");

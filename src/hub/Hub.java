@@ -10,14 +10,14 @@ import util.*;
 
 public class Hub {
 
-   public static final boolean Disp_Log = true;
+   private static final boolean Disp_Log = true;
+
+   private static final Mode mode = Mode.User;
 
    public static Var_List vars;
-   public static Var_List vars_engine;
 
-   public static Model model;
+   public static Model_User model_user; // HACK for GUI
    public static GUI gui;
-   public static Engine engine;
 
    private static PrintWriter p_log;
 
@@ -27,9 +27,6 @@ public class Hub {
       vars.set("pdn-trace", "false");
       vars.set("gui-sound", "");
       vars.load("hub.ini");
-
-      vars_engine = new Var_List();
-      vars_engine.load("engine.ini");
 
       if (vars.get_bool("log")) {
          try {
@@ -45,14 +42,37 @@ public class Hub {
 
       Draughts.init();
 
-      engine = new Engine();
-      gui = new GUI();
-      model = new Model();
+      if (mode == Mode.User) {
 
-      util.Thread.launch(engine);
-      model.start();
+         Var_List params_engine = new Var_List("engine.ini");
 
-      log("init done");
+         Engine_Hub engine = new Engine_Hub(1, vars.get("engine-dir"), vars.get("engine-command"), params_engine);
+         gui = new GUI();
+         model_user = new Model_User(engine);
+
+         log("init done");
+
+         util.Thread.launch(engine);
+
+      } else if (mode == Mode.Game) {
+
+         Var_List params_engine_1 = new Var_List("engine_1.ini");
+         Var_List params_engine_2 = new Var_List("engine_2.ini");
+
+         Engine_Hub engine_hub_1 = new Engine_Hub(1, vars.get("engine-1-dir"), vars.get("engine-1-command"), params_engine_1);
+         Engine_Hub engine_hub_2 = new Engine_Hub(2, vars.get("engine-2-dir"), vars.get("engine-2-command"), params_engine_2);
+
+         Engine_Game_Hub engine_game_1 = new Engine_Game_Hub(engine_hub_1);
+         Engine_Game_Hub engine_game_2 = new Engine_Game_Hub(engine_hub_2);
+
+         gui = new GUI();
+         Model_Game model_game = new Model_Game(engine_game_1, engine_game_2);
+
+         log("init done");
+
+         util.Thread.launch(engine_hub_1);
+         util.Thread.launch(engine_hub_2);
+      }
    }
 
    public static void log(String s) {
@@ -60,4 +80,6 @@ public class Hub {
       if (p_log != null) p_log.println(s);
    }
 }
+
+enum Mode { User, Game };
 
