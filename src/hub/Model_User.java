@@ -12,7 +12,7 @@ import util.*;
 
 public class Model_User implements Engine_User {
 
-   private static final boolean Auto_Save = true;
+   private static final boolean Auto_Save = false;
 
    private final Engine_Hub p_engine;
    private String p_name;
@@ -255,7 +255,7 @@ public class Model_User implements Engine_User {
       p_clicked = 0;
       draw(Move.bit(p_game.last_move()));
 
-      Hub.gui.set_move(p_game.i() / 2 + 1);
+      Hub.gui.set_move(p_game.move_number());
 
       Hub.gui.set_clocks((int) p_game.time(Side.White),
                          (int) p_game.time(Side.Black));
@@ -279,7 +279,7 @@ public class Model_User implements Engine_User {
 
       } else if (computer_turn()) {
 
-         Hub.log(String.format("think number=%d time=%.1f", p_game.i() / 2 + 1, p_game.time(p_game.turn())));
+         Hub.log(String.format("think number=%d time=%.1f", p_game.move_number(), p_game.time(p_game.turn())));
          Hub.gui.set_state("Think");
 
          p_engine.think(p_game);
@@ -293,7 +293,7 @@ public class Model_User implements Engine_User {
 
       } else if (user_turn() && p_ponder && expecting != Move.None && p_engine.can_ponder(p_game, expecting)) {
 
-         Hub.log(String.format("ponder move=%s number=%d time=%.1f", Move.to_string(expecting, p_game.pos()), (p_game.i() + 1) / 2 + 1, p_game.time(Side.opp(p_game.turn()))));
+         Hub.log(String.format("ponder move=%s number=%d time=%.1f", Move.to_string(expecting, p_game.pos()), (p_game.i() + 1) / 2 + 1, p_game.time(Side.opp(p_game.turn())))); // HACK: ignores parity
          Hub.gui.set_state("Ponder");
 
          p_expected = expecting;
@@ -366,7 +366,7 @@ public class Model_User implements Engine_User {
 
       if (!user_turn()) return;
 
-      Hub.log(String.format("user-move move=%s number=%d time=%.1f", Move.to_string(mv, p_game.pos()), p_game.i() / 2 + 1, p_timer.elapsed()));
+      Hub.log(String.format("user-move move=%s number=%d time=%.1f", Move.to_string(mv, p_game.pos()), p_game.move_number(), p_timer.elapsed()));
 
       play_move(mv, Move.None);
    }
@@ -375,7 +375,7 @@ public class Model_User implements Engine_User {
 
       if (!computer_turn()) return;
 
-      Hub.log(String.format("engine-move move=%s number=%d time=%.1f", Move.to_string(mv, p_game.pos()), p_game.i() / 2 + 1, p_timer.elapsed()));
+      Hub.log(String.format("engine-move move=%s number=%d time=%.1f", Move.to_string(mv, p_game.pos()), p_game.move_number(), p_timer.elapsed()));
 
       play_move(mv, expecting);
 

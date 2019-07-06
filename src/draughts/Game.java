@@ -173,6 +173,11 @@ public class Game implements Cloneable {
       return p_i;
    }
 
+   public int move_number() {
+      int parity = (p_start_pos.turn() != Side.White) ? 1 : 0;
+      return (p_i + parity) / 2 + 1;
+   }
+
    public long move(int i) {
       assert i < p_size;
       return p_move_time[i].move();

@@ -1,31 +1,51 @@
 
 package draughts;
 
+import hub.*;
+
 public class Square {
 
-   public static final int File_Size = 10; // must be even
-   public static final int Rank_Size = 10; // must be even
-   private static final int Dark_Shift = 1;
+   public  static final int File_Size   = 10;
+   public  static final int Rank_Size   = 10;
+   private static final int Corner_Dark = 0; // 0: light, 1: dark
 
-   private static final int Ghost_Size = 1; // must be odd
+   private static final int Ghost_Size = 3; // additional internal files
 
-   private static final int File_Even  = File_Size  / 2;
-   private static final int Ghost_Even = Ghost_Size / 2 + (1 - Dark_Shift);
+   private static final int File_Both = File_Size + Ghost_Size;
+   private static final int Dark_Even = File_Both / 2 + Corner_Dark;
+   private static final int Ghost_Odd = (Ghost_Size + (1 - Corner_Dark)) / 2;
 
-   public static final int Dense_Size  =        File_Size         * (Rank_Size / 2);
-   public static final int Sparse_Size = (File_Size + Ghost_Size) * (Rank_Size / 2);
+   static final int Dense_Size  = (File_Size * Rank_Size + Corner_Dark) / 2;
+   static final int Sparse_Size = (File_Both * Rank_Size + Corner_Dark) / 2 - Ghost_Odd;
 
-   private static final int I = (File_Size + Ghost_Size) / 2;
-   private static final int J = (File_Size + Ghost_Size) / 2 + 1;
+   private static final int I = File_Both / 2;
+   private static final int J = File_Both / 2 + 1;
+   private static final int K = 1;
+   private static final int L = File_Both;
 
-   static int[] inc = {
-      -J, -I, +I, +J
+   static int dir_size;
+
+   static int[] dir_inc = {
+      +I, +J, -I, -J, // diagonals for all draughts variants
+      +L, +K, -L, -K, // orthogonal directions for Frisian draughts (optional)
    };
 
-   static int[][] side_inc = {
-      { -J, -I },
+   static int[][] side_dir_inc = {
+      { -I, -J },
       { +I, +J },
    };
+
+   static void init() {
+
+      assert File_Size % 2 == 0;
+      assert Rank_Size % 2 == 0;
+      assert Ghost_Size >= 2; // for Frisian draughts
+      assert Ghost_Size % 2 != 0;
+
+      assert Sparse_Size <= 64;
+
+      dir_size = (Hub.vars.get("game-variant").equals("frisian")) ? 8 : 4;
+   }
 
    public static boolean is_valid(int fl, int rk) {
       return (fl >= 0 && fl < File_Size)
@@ -33,94 +53,67 @@ public class Square {
           && is_dark(fl, rk);
    }
 
-   static boolean is_valid(int sq) {
-
-      if (sq < 0 || sq >= Sparse_Size) return false;
-
-      int rest = sq % (File_Size + Ghost_Size);
-
-      if (rest >= File_Even + Ghost_Even) { // odd rank
-         rest -= File_Even + Ghost_Even;
-      }
-
-      return rest < File_Size / 2;
-   }
-
    public static boolean is_light(int fl, int rk) {
       return !is_dark(fl, rk);
    }
 
    public static boolean is_dark(int fl, int rk) {
-      return (fl + rk + Dark_Shift) % 2 == 0;
+      return (fl + rk) % 2 != Corner_Dark;
    }
 
    public static int make(int fl, int rk) {
+
       assert is_valid(fl, rk);
-      int dense = (rk * File_Size + fl) / 2;
-      return sparse(dense);
+
+      int sq = (rk / 2) * File_Both;
+      if (rk % 2 != 0) sq += Dark_Even; // odd rank
+      sq += fl / 2;
+
+      assert(sq < Sparse_Size);
+      return sq;
    }
 
-   public static int sparse(int dense) {
-
-      assert dense >= 0 && dense < Dense_Size;
-
-      int ranks = dense / File_Size;
-      int rest  = dense % File_Size;
-
-      int sparse = dense + Ghost_Size * ranks;
-
-      if (rest >= File_Even) { // odd rank
-         sparse += Ghost_Even;
-      }
-
-      return sparse;
+   static boolean is_valid(int sq) {
+      return sq >= 0
+          && file(sq) < File_Size
+          && rank(sq) < Rank_Size;
    }
 
-   public static int dense(int sq) {
+   static int file(int sq) {
 
-      assert is_valid(sq);
+      assert sq >= 0;
 
-      int ranks = sq / (File_Size + Ghost_Size);
-      int rest  = sq % (File_Size + Ghost_Size);
+      int files = sq % File_Both;
+      // int ranks = sq / File_Both;
 
-      int dense = sq - Ghost_Size * ranks;
-
-      if (rest >= File_Even + Ghost_Even) { // odd rank
-         dense -= Ghost_Even;
+      if (files >= Dark_Even) { // odd rank
+         return (files - Dark_Even) * 2 + Corner_Dark;
+      } else {
+         return files * 2 + (1 - Corner_Dark);
       }
-
-      return dense;
    }
 
    static int rank(int sq) {
 
-      assert is_valid(sq);
+      assert sq >= 0;
 
-      int ranks = sq / (File_Size + Ghost_Size);
-      int rest  = sq % (File_Size + Ghost_Size);
+      int files = sq % File_Both;
+      int ranks = sq / File_Both;
 
       int rk = ranks * 2;
-
-      if (rest >= File_Even + Ghost_Even) { // odd rank
-         rk++;
-      }
+      if (files >= Dark_Even) rk += 1; // odd rank
 
       return rk;
    }
 
    static int rank(int sq, int sd) {
-
       int rk = rank(sq);
-
-      if (sd == Side.White) {
-         return (Rank_Size - 1) - rk;
-      } else {
-         return rk;
-      }
+      return (sd != Side.Black) ? (Rank_Size - 1) - rk : rk;
    }
 
    public static int opp(int sq) {
-      return sparse((Dense_Size - 1) - dense(sq));
+      assert is_valid(sq);
+      return (Sparse_Size - 1) - sq;
    }
 
    static boolean is_promotion(int sq, int sd) {
@@ -136,12 +129,18 @@ public class Square {
    }
 
    static int from_std(int std) throws Bad_Input {
+
       if (std < 1 || std > Dense_Size) throw new Bad_Input();
-      return sparse(std - 1);
+
+      int fl = ((std - 1) * 2) % File_Size;
+      int rk = ((std - 1) * 2) / File_Size;
+      if (!is_dark(fl, rk)) fl += 1;
+
+      return make(fl, rk);
    }
 
    static int to_std(int sq) {
-      return dense(sq) + 1;
+      return (rank(sq) * File_Size + file(sq)) / 2 + 1;
    }
 }
 

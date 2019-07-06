@@ -292,11 +292,6 @@ class Token {
    private Class p_token;
 
    Token(String lexeme, Class token) {
-
-      if (Hub.vars.get_bool("pdn-trace")) {
-         System.out.println(lexeme);
-      }
-
       p_lexeme = lexeme;
       p_token = token;
    }

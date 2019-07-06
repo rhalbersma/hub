@@ -1,12 +1,12 @@
 
-Hub 2.0 Copyright (C) 2015-2017 Fabien Letouzey.
+Hub 2.1 Copyright (C) 2015-2019 Fabien Letouzey.
 This program is distributed under the GNU General Public License version 3.
 See license.txt for more details.
 
 ---
 
-Today is 2017-07-11.
-Hub is a minimal graphical interface (GUI) for the Scan international (10x10) draughts engine.  It was designed only for operating Scan during the Computer Olypiads and is released "as is" in the hope that you find it useful, especially on Mac or Linux.  Hub is written in Java and is hopefully cross-platform.
+Today is 2019-07-06.
+Hub is a minimal graphical interface (GUI) for the Scan international (10x10) draughts engine (and variants).  It was designed only for operating Scan during the Computer Olypiads and is released "as is" in the hope that you find it useful, especially on Mac or Linux.  Hub is written in Java and is hopefully cross-platform (excluding mobile ones unfortunately).
 
 In order to run Hub, you will need:
 - Scan installed on your machine (version 3.0 or more recent)
@@ -15,11 +15,11 @@ In order to run Hub, you will need:
 - run "hub.jar"; click on the icon I guess or "java -jar hub.jar" in a terminal
 - wait for Scan to be ready, as endgame tables can take a while to load
 
-The changes from Hub 1.0 are:
-- support for the new Hub protocol used in Scan 3.x (see protocol.txt for technical details)
-- values (such as directory name) in the INI files can now contain spaces
-- the 'P' key will set up a position in FEN format; you first need to copy it from an external source such as a web site
-- minor fixes
+NEW: support for orthogonal captures (Frisian draughts).
+Uncomment the following line in hub.ini by removing the '#':
+# game-variant = frisian
+
+Note: only the orthogonal captures are supported.  The other Frisian-draughts rules (capture priority, wolf rule, ...) are not.  Scan will follow those rules, however.
 
 Good luck,
 
@@ -31,7 +31,6 @@ Configuration
 
 hub.ini (see details below): main Hub configuration
 engine.ini: this is sent to the engine; Hub has no idea what it means
-NEW: Spaces are now allowed in the INI files (fixed from version 1.0)!
 
 engine-dir & engine-command: engine path and executable name
 
@@ -40,6 +39,7 @@ gui-font: font size
 gui-oval: whether to use ellipses or circles for pieces
 gui-sound: sound file to play when the engine moves; at least the WAV format is known to work
 
+game-variant: "frisian"; anything else is interpreted as "international draughts"
 game-moves & game-time & game-inc: time control.
 game-moves is the number of moves per period, repeating (0 = whole game)
 game-time in minutes
@@ -62,7 +62,7 @@ Apart from using the mouse to input moves, Hub is controlled using the keyboard 
 (L)oad     -> load "game.pdn"; note that only the first game is loaded!
 (N)ew game -> new game
 (O)val     -> toggle oval graphics on/off
-(P)os      -> NEW: set up (paste) a FEN position from the system clipboard
+(P)os      -> set up (paste) a FEN position from the system clipboard
 (R)everse  -> reverse board
 (S)ave     -> save "game.pdn"
 escape     -> move now

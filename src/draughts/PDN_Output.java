@@ -100,7 +100,7 @@ public class PDN_Output implements Output {
       // starting position
 
       if (!pos.equals(Pos.Start)) {
-         po.put_tag_pair("Setup", "1");
+         po.put_tag_pair("SetUp", "1");
          po.put_tag_pair("FEN", FEN.to_fen(pos));
       }
 

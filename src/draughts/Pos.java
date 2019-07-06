@@ -22,9 +22,9 @@ public class Pos {
 
       int rank_size = (Square.Rank_Size - 1) / 2;
 
-      for (int dense = 0; dense < Square.Dense_Size; dense++) {
+      for (long b = Bit.Squares; b != 0; b = Bit.rest(b)) {
 
-         int sq = Square.sparse(dense);
+         int sq = Bit.first(b);
 
          if (Square.rank(sq, Side.White) < rank_size) {
             p_side[Side.White] = Bit.set(p_side[Side.White], sq);
@@ -110,9 +110,9 @@ public class Pos {
 
       s += (turn() == Side.White) ? 'W' : 'B';
 
-      for (int dense = 0; dense < Square.Dense_Size; dense++) {
+      for (long b = Bit.Squares; b != 0; b = Bit.rest(b)) {
 
-         int sq = Square.sparse(dense);
+         int sq = Bit.first(b);
 
          switch (piece_side(sq)) {
             case White_Man :  s += 'w'; break;

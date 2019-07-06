@@ -8,6 +8,7 @@ public class Bit {
    static long Squares;
 
    private static long[] p_king_moves;
+   private static long[] p_king_captures;
 
    private static long[][] p_between;
    private static byte[][] p_inc;
@@ -18,59 +19,45 @@ public class Bit {
 
       Squares = 0;
 
-      for (int dense = 0; dense < Square.Dense_Size; dense++) {
-         int sq = Square.sparse(dense);
-         Squares = Bit.set(Squares, sq);
-      }
-
-      // king moves
-
-      p_king_moves = new long[Square.Sparse_Size];
-
-      for (int dense = 0; dense < Square.Dense_Size; dense++) {
-
-         int from = Square.sparse(dense);
-         long b = 0;
-
-         for (int dir = 0; dir < 4; dir++) {
-
-            int inc = Square.inc[dir];
-
-            int to = from + inc;
-
-            while (Square.is_valid(to)) {
-               b = Bit.set(b, to);
-               to += inc;
+      for (int rk = 0; rk < Square.Rank_Size; rk++) {
+         for (int fl = 0; fl < Square.File_Size; fl++) {
+            if (Square.is_dark(fl, rk)) {
+               int sq = Square.make(fl, rk);
+               Squares = set(Squares, sq);
             }
          }
-
-         p_king_moves[from] = b;
       }
 
-      // between & inc // TODO: merge with p_king_moves? #
+      assert(count(Squares) == Square.Dense_Size);
+
+      // bitboard tables
+
+      p_king_moves    = new long[Square.Sparse_Size];
+      p_king_captures = new long[Square.Sparse_Size];
 
       p_between = new long[Square.Sparse_Size][Square.Sparse_Size];
       p_inc     = new byte[Square.Sparse_Size][Square.Sparse_Size];
 
-      for (int dense = 0; dense < Square.Dense_Size; dense++) {
+      for (long froms = Squares; froms != 0; froms = rest(froms)) {
 
-         int from = Square.sparse(dense);
+         int from = first(froms);
 
-         for (int dir = 0; dir < 4; dir++) {
+         for (int dir = 0; dir < Square.dir_size; dir++) {
 
-            int inc = Square.inc[dir];
-            long b = 0;
+            int inc = Square.dir_inc[dir];
 
-            int to = from + inc;
+            long ray = 0;
 
-            while (Square.is_valid(to)) {
+            for (int to = from + inc; Square.is_valid(to); to += inc) {
 
-               p_between[from][to] = b;
+               p_between[from][to] = ray; // partial ray
                p_inc[from][to] = (byte) inc;
 
-               b = Bit.set(b, to);
-               to += inc;
+               ray = set(ray, to);
             }
+
+            if (dir < 4) p_king_moves[from] |= ray; // only diagonals, even in Frisian draughts
+            p_king_captures[from] |= ray; // captures are different in Frisian draughts
          }
       }
    }
@@ -78,6 +65,11 @@ public class Bit {
    static long king_moves(int sq) {
       assert Square.is_valid(sq);
       return p_king_moves[sq];
+   }
+
+   static long king_captures(int sq) {
+      assert Square.is_valid(sq);
+      return p_king_captures[sq];
    }
 
    static long between(int from, int to) {
@@ -111,12 +103,12 @@ public class Bit {
    }
 
    public static long set(long b, int n) {
-      assert !Bit.has(b, n);
+      assert !has(b, n);
       return b | bit(n);
    }
 
    public static long clear(long b, int n) {
-      assert Bit.has(b, n);
+      assert has(b, n);
       return b & ~bit(n);
    }
 
@@ -125,11 +117,7 @@ public class Bit {
    }
 
    static long shift(long b, int n) {
-      if (n < 0) {
-         return b >> -n;
-      } else {
-         return b << +n;
-      }
+      return (n < 0) ? b >>> -n : b << +n;
    }
 
    static boolean is_incl(long b0, long b1) {
@@ -172,7 +160,7 @@ public class Bit {
 
                int sq = Square.make(fl, rk);
 
-               if (Bit.has(b, sq)) {
+               if (has(b, sq)) {
                   System.out.print("# ");
                } else {
                   System.out.print("- ");

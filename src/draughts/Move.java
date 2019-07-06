@@ -8,7 +8,7 @@ import util.*;
 public class Move {
 
    public static final long None = 0;
-   public static final long Amb = 1;
+   public static final long Amb  = 1;
 
    static long make(int from, int to) {
       return make(from, to, 0);

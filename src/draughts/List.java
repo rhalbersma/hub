@@ -9,13 +9,13 @@ public class List {
    private int p_size;
    private int p_cap_size;
 
-   public List() {
+   List() {
       p_list = new long[128];
       p_size = 0;
       p_cap_size = 0;
    }
 
-   void add(int from, int to) {
+   void add_move(int from, int to) {
 
       assert p_cap_size == 0;
 
@@ -25,22 +25,22 @@ public class List {
       p_list[p_size++] = mv;
    }
 
-   void add(int from, int to, long caps) {
+   void add_capture(int from, int to, long caps) {
 
       assert caps != 0;
 
       int cap_size = Bit.count(caps);
 
-      if (cap_size < p_cap_size) {
-         return;
-      } else if (cap_size > p_cap_size) {
+      if (cap_size < p_cap_size) return;
+
+      if (cap_size > p_cap_size) { // new largest capture
          p_size = 0;
          p_cap_size = cap_size;
       }
 
       long mv = Move.make(from, to, caps);
 
-      if (cap_size >= 4 && has(mv)) return; // duplicate move
+      if (cap_size >= 2 && has(mv)) return; // duplicate move
 
       assert !has(mv);
       p_list[p_size++] = mv;
@@ -50,7 +50,7 @@ public class List {
       return p_size;
    }
 
-   public int cap_size() {
+   int cap_size() {
       return p_cap_size;
    }
 
@@ -59,7 +59,7 @@ public class List {
       return p_list[i];
    }
 
-   public boolean has(long mv) {
+   boolean has(long mv) {
 
       for (int i = 0; i < p_size; i++) {
          if (p_list[i] == mv) return true;
